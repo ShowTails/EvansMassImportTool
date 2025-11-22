@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Evans FullExport.XML → ShowTails XML Extractor</title>
+  <title>Evans FullExport.XML → ShowTails Import Helper</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
@@ -90,10 +90,6 @@
       margin-left: 0.35rem;
     }
 
-    .pill span {
-      font-size: 0.9em;
-    }
-
     .status {
       font-size: 0.85rem;
       margin-top: 0.5rem;
@@ -173,17 +169,6 @@
       font-size: 0.78rem;
     }
 
-    .badge {
-      display: inline-block;
-      font-size: 0.7rem;
-      padding: 0.1rem 0.4rem;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      color: #4b5563;
-      background: #f9fafb;
-      margin-right: 0.3rem;
-    }
-
     textarea {
       width: 100%;
       min-height: 350px;
@@ -256,21 +241,25 @@
   <header style="margin-bottom: 1rem;">
     <h1>Evans FullExport.XML → ShowTails Import Helper</h1>
     <div class="subheading">
-      Upload your Evans <code>.XML</code> file, confirm tables & record counts, then copy the full XML text into Glide’s <strong>XML → JSON</strong> column.
+      Upload or link your Evans <code>.XML</code> file, confirm tables & record counts, then copy the full XML text into Glide’s <strong>XML → JSON</strong> column.
     </div>
   </header>
 
   <div class="layout">
     <!-- LEFT: File upload + summary + table counts -->
     <section class="card">
-      <h2>1) Upload Evans XML File</h2>
+      <h2>1) Upload or Link Evans XML File</h2>
       <label>
-        Choose your Evans <code>FullExport.XML</code> file
-        <span class="pill">
-          <span>XML</span> <span>Full Export</span>
-        </span>
+        A) Upload from your computer
+        <span class="pill">Local file</span>
       </label>
       <input type="file" id="fileInput" accept=".xml, text/xml" />
+
+      <div class="small" style="margin-top:0.4rem;">
+        Or B) Open this page with a <code>?file=&lt;url&gt;</code> parameter from ShowTails:
+        <br />
+        <code>https://showtails.github.io/EvansMassImportTool/?file=&lt;xml-file-url&gt;</code>
+      </div>
 
       <div id="status" class="status"></div>
 
@@ -301,14 +290,6 @@
         </div>
         <div id="tableRows"></div>
       </div>
-
-      <div class="small" style="margin-top:0.6rem;">
-        This tool does <strong>not modify</strong> your XML. It only reads it to:
-        <ul class="hint-list">
-          <li>Show how many records are in each table (<code>&lt;Animals&gt;</code>, <code>&lt;Litters&gt;</code>, <code>&lt;Winnings&gt;</code>, etc.).</li>
-          <li>Let you copy the raw XML text into Glide unchanged.</li>
-        </ul>
-      </div>
     </section>
 
     <!-- RIGHT: XML text + copy button -->
@@ -321,10 +302,10 @@
         </button>
       </div>
 
-      <textarea id="xmlOutput" placeholder="The full XML file contents will appear here after you upload your Evans export..." spellcheck="false"></textarea>
+      <textarea id="xmlOutput" placeholder="The full XML file contents will appear here after you upload or link your Evans export..." spellcheck="false"></textarea>
 
       <div class="small">
-        Paste this XML into a <strong>Text</strong> column in Glide, then set up an <strong>XML → JSON</strong> computed column on that text.
+        Paste this XML into a <strong>Text</strong> column in Glide, then add an <strong>XML → JSON</strong> computed column on that text.
         From there, you can:
         <ul class="hint-list">
           <li>Use JSON paths like <code>$.ExportedData.Animals.Record</code> to get all rabbits.</li>
@@ -335,6 +316,9 @@
   </div>
 
   <script>
+    // 🔧 SET THIS TO YOUR CLOUDFLARE WORKER URL
+    const PROXY_URL = "https://evans-xml-proxy.YOURACCOUNT.workers.dev";
+
     const fileInput   = document.getElementById('fileInput');
     const statusEl    = document.getElementById('status');
     const statsGrid   = document.getElementById('statsGrid');
@@ -361,12 +345,10 @@
         throw new Error('XML parse error – please verify this is a valid Evans export.');
       }
 
-      // Find root <ExportedData> or fallback to documentElement
       let root = xmlDoc.getElementsByTagName('ExportedData')[0];
       if (!root) root = xmlDoc.documentElement;
 
-      // Collect tables: direct child elements of root
-      const sectionMap = new Map(); // name -> { name, count }
+      const sectionMap = new Map();
 
       const children = root.children;
       for (let i = 0; i < children.length; i++) {
@@ -374,11 +356,9 @@
         if (node.nodeType !== 1) continue;
 
         const name = node.tagName;
-        // Count <Record> descendants inside this node
         const records = node.getElementsByTagName('Record');
         const count = records ? records.length : 0;
 
-        // If the table name repeats for any reason, sum counts
         if (sectionMap.has(name)) {
           const prev = sectionMap.get(name);
           prev.count += count;
@@ -388,7 +368,6 @@
         }
       }
 
-      // Compute some quick totals / highlights
       let totalTables = sectionMap.size;
       let totalRecords = 0;
       let animalsCount = 0;
@@ -396,12 +375,8 @@
 
       for (const { name, count } of sectionMap.values()) {
         totalRecords += count;
-        if (name.toLowerCase() === 'animals') {
-          animalsCount = count;
-        }
-        if (name.toLowerCase() === 'winnings') {
-          winningsCount = count;
-        }
+        if (name.toLowerCase() === 'animals') animalsCount = count;
+        if (name.toLowerCase() === 'winnings') winningsCount = count;
       }
 
       return {
@@ -414,7 +389,6 @@
     }
 
     function renderTableSummary(info) {
-      // Stats
       statsGrid.style.display = 'block';
       tablesBox.style.display = 'block';
 
@@ -423,7 +397,6 @@
       animalsCountEl.textContent = info.animalsCount;
       winningsCountEl.textContent = info.winningsCount;
 
-      // Rows
       tableRowsEl.innerHTML = '';
 
       const typeHints = {
@@ -432,9 +405,9 @@
         critterweights: 'Individual rabbit weights',
         litterweights: 'Litter weights',
         winnings: 'Show records',
-        contacts: 'Buyers / Sellers / People',
+        contacts: 'Buyers / sellers / people',
         picturemap: 'Photos linked to rabbits',
-        mileage: 'Travel records (miles to shows)',
+        mileage: 'Travel records',
         notes: 'General notes / memos'
       };
 
@@ -465,6 +438,30 @@
       });
     }
 
+    function handleXmlText(text) {
+      xmlOutput.value = text || "";
+      copyBtn.disabled = !text;
+
+      if (!text) {
+        statsGrid.style.display = 'none';
+        tablesBox.style.display = 'none';
+        tableRowsEl.innerHTML = '';
+        return;
+      }
+
+      try {
+        const info = analyzeXml(text);
+        renderTableSummary(info);
+        setStatus(
+          `Parsed successfully. Found ${info.animalsCount} Animals records and ${info.winningsCount} Winnings records across ${info.totalTables} tables.`,
+          true
+        );
+      } catch (err) {
+        console.error(err);
+        setStatus(err.message || 'An error occurred while parsing the XML file.', false);
+      }
+    }
+
     // COPY BUTTON
     copyBtn.addEventListener('click', () => {
       if (!xmlOutput.value) return;
@@ -484,13 +481,13 @@
         });
     });
 
-    // FILE INPUT HANDLER
+    // LOCAL FILE INPUT
     fileInput.addEventListener('change', function () {
       const file = this.files && this.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      setStatus('Reading file…', true);
+      setStatus('Reading local file…', true);
       statsGrid.style.display = 'none';
       tablesBox.style.display = 'none';
       tableRowsEl.innerHTML = '';
@@ -498,33 +495,54 @@
       copyBtn.disabled = true;
 
       reader.onload = function (e) {
-        try {
-          const text = e.target.result;
-
-          // Show raw XML in textarea (unchanged)
-          xmlOutput.value = text;
-          copyBtn.disabled = !text;
-
-          // Analyze structure and show stats
-          const info = analyzeXml(text);
-          renderTableSummary(info);
-
-          setStatus(
-            `Parsed successfully. Found ${info.animalsCount} Animals records and ${info.winningsCount} Winnings records across ${info.totalTables} tables.`,
-            true
-          );
-        } catch (err) {
-          console.error(err);
-          setStatus(err.message || 'An error occurred while parsing the XML file.', false);
-        }
+        const text = e.target.result;
+        handleXmlText(text);
       };
 
       reader.onerror = function () {
-        setStatus('Error reading file.', false);
+        setStatus('Error reading local file.', false);
       };
 
       reader.readAsText(file);
     });
+
+    // AUTO-FETCH IF ?file= IS PRESENT (via Cloudflare Worker)
+    async function tryFetchFromQueryParam() {
+      const url = new URL(window.location.href);
+      const fileParam = url.searchParams.get('file');
+      if (!fileParam) return;
+
+      if (!PROXY_URL) {
+        setStatus('Proxy URL is not configured in the tool.', false);
+        return;
+      }
+
+      try {
+        setStatus('Loading XML via proxy…', true);
+        statsGrid.style.display = 'none';
+        tablesBox.style.display = 'none';
+        tableRowsEl.innerHTML = '';
+        xmlOutput.value = '';
+        copyBtn.disabled = true;
+
+        const proxied = PROXY_URL + '?file=' + encodeURIComponent(fileParam);
+        const resp = await fetch(proxied);
+        if (!resp.ok) {
+          throw new Error(`Proxy responded with status ${resp.status}`);
+        }
+        const text = await resp.text();
+        handleXmlText(text);
+      } catch (err) {
+        console.error(err);
+        setStatus(
+          (err && err.message) ? `Error loading via proxy: ${err.message}` : 'Error loading via proxy.',
+          false
+        );
+      }
+    }
+
+    // Run on load
+    tryFetchFromQueryParam();
   </script>
 </body>
 </html>
