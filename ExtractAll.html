@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Evans FullExport.XML → ShowTails XML Extractor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f5f5f8;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --danger: #b91c1c;
+      --success: #15803d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 1.5rem;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+    }
+
+    h1 {
+      font-size: 1.35rem;
+      margin: 0 0 0.25rem;
+    }
+
+    h2 {
+      font-size: 1rem;
+      margin: 0 0 0.75rem;
+    }
+
+    .subheading {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+      padding: 1rem 1.2rem;
+      border: 1px solid var(--border);
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    input[type="file"] {
+      display: block;
+      margin-top: 0.35rem;
+      font-size: 0.85rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.7rem;
+      padding: 0.1rem 0.5rem;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      margin-left: 0.35rem;
+    }
+
+    .pill span {
+      font-size: 0.9em;
+    }
+
+    .status {
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+    }
+
+    .status.ok {
+      color: var(--success);
+    }
+
+    .status.err {
+      color: var(--danger);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .stat-card {
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.6rem;
+      background: #f9fafb;
+      font-size: 0.8rem;
+    }
+
+    .stat-label {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 0.2rem;
+    }
+
+    .stat-value {
+      font-weight: 600;
+    }
+
+    .table-list {
+      margin-top: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      background: #f9fafb;
+    }
+
+    .table-header,
+    .table-row {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr 1.5fr;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.8rem;
+      align-items: center;
+    }
+
+    .table-header {
+      background: #e5e7eb;
+      font-weight: 600;
+    }
+
+    .table-row:nth-child(even) {
+      background: #f3f4f6;
+    }
+
+    .table-name {
+      font-weight: 500;
+    }
+
+    .table-records {
+      font-feature-settings: "tnum" 1, "lnum" 1;
+    }
+
+    .table-type {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      color: #4b5563;
+      background: #f9fafb;
+      margin-right: 0.3rem;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 350px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+      padding: 0.6rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      box-sizing: border-box;
+      resize: vertical;
+      background: #f9fafb;
+      white-space: pre;
+    }
+
+    .textarea-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.4rem;
+    }
+
+    button {
+      padding: 0.45rem 0.9rem;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+      background: var(--accent);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #copyBtn.copied {
+      background: var(--success);
+    }
+
+    .small {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.45rem;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.78rem;
+    }
+
+    .hint-list {
+      margin: 0.4rem 0 0;
+      padding-left: 1rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .hint-list li {
+      margin: 0.1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <header style="margin-bottom: 1rem;">
+    <h1>Evans FullExport.XML → ShowTails Import Helper</h1>
+    <div class="subheading">
+      Upload your Evans <code>.XML</code> file, confirm tables & record counts, then copy the full XML text into Glide’s <strong>XML → JSON</strong> column.
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- LEFT: File upload + summary + table counts -->
+    <section class="card">
+      <h2>1) Upload Evans XML File</h2>
+      <label>
+        Choose your Evans <code>FullExport.XML</code> file
+        <span class="pill">
+          <span>XML</span> <span>Full Export</span>
+        </span>
+      </label>
+      <input type="file" id="fileInput" accept=".xml, text/xml" />
+
+      <div id="status" class="status"></div>
+
+      <div class="stats-grid" id="statsGrid" style="display:none;">
+        <div class="stat-card">
+          <div class="stat-label">Total Tables</div>
+          <div class="stat-value" id="totalTables">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Records</div>
+          <div class="stat-value" id="totalRecords">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Animals (Rabbits)</div>
+          <div class="stat-value" id="animalsCount">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Winnings (Show Records)</div>
+          <div class="stat-value" id="winningsCount">0</div>
+        </div>
+      </div>
+
+      <div id="tablesContainer" class="table-list" style="display:none; margin-top:0.9rem;">
+        <div class="table-header">
+          <div>Table</div>
+          <div>Record Count</div>
+          <div>Notes</div>
+        </div>
+        <div id="tableRows"></div>
+      </div>
+
+      <div class="small" style="margin-top:0.6rem;">
+        This tool does <strong>not modify</strong> your XML. It only reads it to:
+        <ul class="hint-list">
+          <li>Show how many records are in each table (<code>&lt;Animals&gt;</code>, <code>&lt;Litters&gt;</code>, <code>&lt;Winnings&gt;</code>, etc.).</li>
+          <li>Let you copy the raw XML text into Glide unchanged.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- RIGHT: XML text + copy button -->
+    <section class="card">
+      <div class="textarea-label-row">
+        <h2 style="margin:0;">2) Copy XML Text for Glide</h2>
+        <button id="copyBtn" disabled>
+          <span>📋</span>
+          <span>Copy All XML Text</span>
+        </button>
+      </div>
+
+      <textarea id="xmlOutput" placeholder="The full XML file contents will appear here after you upload your Evans export..." spellcheck="false"></textarea>
+
+      <div class="small">
+        Paste this XML into a <strong>Text</strong> column in Glide, then set up an <strong>XML → JSON</strong> computed column on that text.
+        From there, you can:
+        <ul class="hint-list">
+          <li>Use JSON paths like <code>$.ExportedData.Animals.Record</code> to get all rabbits.</li>
+          <li>Use helper tables to loop through each record and create rows in your Rabbits, Litters, Winnings, and Weights tables.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const fileInput   = document.getElementById('fileInput');
+    const statusEl    = document.getElementById('status');
+    const statsGrid   = document.getElementById('statsGrid');
+    const tablesBox   = document.getElementById('tablesContainer');
+    const tableRowsEl = document.getElementById('tableRows');
+    const totalTablesEl   = document.getElementById('totalTables');
+    const totalRecordsEl  = document.getElementById('totalRecords');
+    const animalsCountEl  = document.getElementById('animalsCount');
+    const winningsCountEl = document.getElementById('winningsCount');
+    const xmlOutput  = document.getElementById('xmlOutput');
+    const copyBtn    = document.getElementById('copyBtn');
+
+    function setStatus(msg, ok = true) {
+      statusEl.textContent = msg;
+      statusEl.className = 'status ' + (ok ? 'ok' : 'err');
+    }
+
+    function analyzeXml(xmlText) {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+      const parseError = xmlDoc.getElementsByTagName('parsererror')[0];
+
+      if (parseError) {
+        throw new Error('XML parse error – please verify this is a valid Evans export.');
+      }
+
+      // Find root <ExportedData> or fallback to documentElement
+      let root = xmlDoc.getElementsByTagName('ExportedData')[0];
+      if (!root) root = xmlDoc.documentElement;
+
+      // Collect tables: direct child elements of root
+      const sectionMap = new Map(); // name -> { name, count }
+
+      const children = root.children;
+      for (let i = 0; i < children.length; i++) {
+        const node = children[i];
+        if (node.nodeType !== 1) continue;
+
+        const name = node.tagName;
+        // Count <Record> descendants inside this node
+        const records = node.getElementsByTagName('Record');
+        const count = records ? records.length : 0;
+
+        // If the table name repeats for any reason, sum counts
+        if (sectionMap.has(name)) {
+          const prev = sectionMap.get(name);
+          prev.count += count;
+          sectionMap.set(name, prev);
+        } else {
+          sectionMap.set(name, { name, count });
+        }
+      }
+
+      // Compute some quick totals / highlights
+      let totalTables = sectionMap.size;
+      let totalRecords = 0;
+      let animalsCount = 0;
+      let winningsCount = 0;
+
+      for (const { name, count } of sectionMap.values()) {
+        totalRecords += count;
+        if (name.toLowerCase() === 'animals') {
+          animalsCount = count;
+        }
+        if (name.toLowerCase() === 'winnings') {
+          winningsCount = count;
+        }
+      }
+
+      return {
+        sections: Array.from(sectionMap.values()),
+        totalTables,
+        totalRecords,
+        animalsCount,
+        winningsCount
+      };
+    }
+
+    function renderTableSummary(info) {
+      // Stats
+      statsGrid.style.display = 'block';
+      tablesBox.style.display = 'block';
+
+      totalTablesEl.textContent  = info.totalTables;
+      totalRecordsEl.textContent = info.totalRecords;
+      animalsCountEl.textContent = info.animalsCount;
+      winningsCountEl.textContent = info.winningsCount;
+
+      // Rows
+      tableRowsEl.innerHTML = '';
+
+      const typeHints = {
+        animals: 'Rabbits / animals',
+        litters: 'Litters (kits per breeding)',
+        critterweights: 'Individual rabbit weights',
+        litterweights: 'Litter weights',
+        winnings: 'Show records',
+        contacts: 'Buyers / Sellers / People',
+        picturemap: 'Photos linked to rabbits',
+        mileage: 'Travel records (miles to shows)',
+        notes: 'General notes / memos'
+      };
+
+      info.sections.sort((a, b) => a.name.localeCompare(b.name));
+
+      info.sections.forEach(sec => {
+        const key = sec.name.toLowerCase();
+        const hint = typeHints[key] || 'Generic table';
+        const row = document.createElement('div');
+        row.className = 'table-row';
+
+        const nameCell = document.createElement('div');
+        nameCell.className = 'table-name';
+        nameCell.textContent = sec.name;
+
+        const recordsCell = document.createElement('div');
+        recordsCell.className = 'table-records';
+        recordsCell.textContent = sec.count;
+
+        const notesCell = document.createElement('div');
+        notesCell.className = 'table-type';
+        notesCell.textContent = hint;
+
+        row.appendChild(nameCell);
+        row.appendChild(recordsCell);
+        row.appendChild(notesCell);
+        tableRowsEl.appendChild(row);
+      });
+    }
+
+    // COPY BUTTON
+    copyBtn.addEventListener('click', () => {
+      if (!xmlOutput.value) return;
+      xmlOutput.select();
+      xmlOutput.setSelectionRange(0, xmlOutput.value.length);
+      navigator.clipboard.writeText(xmlOutput.value)
+        .then(() => {
+          copyBtn.textContent = '✅ Copied!';
+          copyBtn.classList.add('copied');
+          setTimeout(() => {
+            copyBtn.textContent = '📋 Copy All XML Text';
+            copyBtn.classList.remove('copied');
+          }, 1500);
+        })
+        .catch(() => {
+          alert('Unable to copy automatically. Please select and copy manually.');
+        });
+    });
+
+    // FILE INPUT HANDLER
+    fileInput.addEventListener('change', function () {
+      const file = this.files && this.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      setStatus('Reading file…', true);
+      statsGrid.style.display = 'none';
+      tablesBox.style.display = 'none';
+      tableRowsEl.innerHTML = '';
+      xmlOutput.value = '';
+      copyBtn.disabled = true;
+
+      reader.onload = function (e) {
+        try {
+          const text = e.target.result;
+
+          // Show raw XML in textarea (unchanged)
+          xmlOutput.value = text;
+          copyBtn.disabled = !text;
+
+          // Analyze structure and show stats
+          const info = analyzeXml(text);
+          renderTableSummary(info);
+
+          setStatus(
+            `Parsed successfully. Found ${info.animalsCount} Animals records and ${info.winningsCount} Winnings records across ${info.totalTables} tables.`,
+            true
+          );
+        } catch (err) {
+          console.error(err);
+          setStatus(err.message || 'An error occurred while parsing the XML file.', false);
+        }
+      };
+
+      reader.onerror = function () {
+        setStatus('Error reading file.', false);
+      };
+
+      reader.readAsText(file);
+    });
+  </script>
+</body>
+</html>
